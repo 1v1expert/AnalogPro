@@ -57,7 +57,7 @@
                                     <div class="col-md-11 col-md-offset-1">
                                         <form action="{% url 'api:search' %}" method="post" id="form">
                                             {% csrf_token %}
-                                        <input type="hidden" name="pk" id="pk" value="">
+                                            <input type="hidden" name="pk" id="pk" value="">
                                             {#                                            <input type="hidden" name="advanced_search" value="False">#}
                                             <input type="hidden" name="manufacturer_to" id="manufacturer_to"
                                                    value="{{ manufacturers.first.id }}">
@@ -131,6 +131,7 @@
                                     <div class="row">
                                         <input type="submit" class="search-area search-btn style-button"
                                                value="Искать"/>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -146,5 +147,6 @@
         {#      <div class="banner-arrow">#}
         {#        <p class="pulse"><a href="#choose"><img src="{% static 'images/arrow-bottom.png' %}" alt=""/></a></p>#}
         {#      </div>#}
+
     </div>
 </div>
