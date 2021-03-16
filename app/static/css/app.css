@@ -1,6 +1,32 @@
 /*	Main stylesheet for app
 	==========================
 */
+.footer-link ul li a {
+    width: 125px;
+}
+@media (max-width: 768px) {
+    .blue-button {
+        width: 150px;
+        -webkit-border-radius: 4px;
+        -moz-border-radius: 4px;
+        border-radius: 4px;
+        margin: 0px 20px 0px 0px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+        display: inline-block;
+    }
+}
+
+@media (max-width: 1000px) {
+    .carousel-control .glyphicon-chevron-right {
+        background: url(../images/arrow-right-w.png) no-repeat;
+    }
+    .carousel-control .glyphicon-chevron-left {
+        background: url(../images/arrow-left-w.png) no-repeat;
+    }
+}
 
 .open>.dropdown-menu {
     border-radius: 6px;
