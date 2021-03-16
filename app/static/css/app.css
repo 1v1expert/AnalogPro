@@ -2,6 +2,25 @@
 	==========================
 */
 
+.open>.dropdown-menu {
+    border-radius: 6px;
+}
+.dropdown-menu>li>a {
+    display: block;
+    padding: 3px 35px;
+    clear: both;
+    font-weight: 500;
+    line-height: 1.42857143;
+    color: #333;
+    white-space: nowrap;
+}
+
+.btn-group, .btn-group-vertical {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+}
+
 body {
     font-family: HelveticaNeueCyr;
 }
@@ -329,7 +348,7 @@ h4 {
 @media (min-width: 640px) {
     .input-append .btn-group:last-child > .dropdown-toggle {
         margin-top: 1px;
-        padding: 22px 32px;
+        padding: 23px 32px;
     }
 
     .service-container {
@@ -366,8 +385,8 @@ h4 {
     }
 
     .baaner-container {
-        width: 78%;
-        margin: 0 11%;
+        width: 86%;
+        margin: 0px 7%;
     }
 
     .letter-container h1 a {
