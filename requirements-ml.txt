@@ -8,7 +8,7 @@ backcall==0.1.0
 certifi==2018.11.29
 chardet==3.0.4
 decorator==4.4.0
-Django==2.2.10
+Django==2.2.18
 django-jet==1.0.8
 django-js-asset==1.2.2
 django-mptt==0.9.1
@@ -95,7 +95,7 @@ backcall==0.1.0
 certifi==2018.11.29
 chardet==3.0.4
 decorator==4.4.0
-Django==2.2.10
+Django==2.2.18
 django-jet==1.0.8
 django-js-asset==1.2.2
 django-mptt==0.9.1
