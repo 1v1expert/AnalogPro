@@ -1,14 +1,25 @@
-from collections import OrderedDict, defaultdict
 import datetime
+from collections import OrderedDict
+from time import time
+from typing import Optional, Tuple
 
-from catalog.models import Product, Attribute
+from django.db.models import QuerySet
+from catalog.reporters.writers import HealthCheckBookkeepingWriter
+from catalog.models import AnalogSearch, Attribute, Manufacturer, Product
+from catalog.utils import get_or_create_tech_user
+
+class BaseGenerator:
+    def __init__(self, *args, **kwargs):
+        self.start_at = time()
+        
+    def generate(self):
+        raise NotImplemented
 
 
 class DefaultGeneratorTemplate(object):
     """Стандартный генератор по производителям"""
     def __init__(self, manufactures=None):
         self.manufactures = manufactures
-        # self.products = products
         self.date = datetime.datetime.now()
         self.attributes = Attribute.objects.values_list('title', flat=True)
     
@@ -123,30 +134,63 @@ class AdditionalGeneratorTemplate(object):
         return cls_obj.objects.filter(**kwargs).values_list()
 
 
-# class ProductGeneratorTemplate(object):
-#     """Генератор отчётов по инстансам базовых классов с произвольным фильтром"""
-#
-#     def __init__(self, products, *args, **kwargs):
-#         self.products = products
-#         self.local_fields = None
-#         self.kwargs = kwargs
-#
-#     def generate(self, cls_obj):
-#         data = {
-#             "top_header": {
-#                 'spread': None,
-#                 'row': [],
-#                 'name': str(cls_obj._meta.verbose_name),
-#             },
-#             "table_header": OrderedDict([("", "")]),
-#             "table_data": self.values(cls_obj, **self.kwargs),
-#         }
-#         data["top_header"]["spread"] = len(data['table_header'])
-#
-#         return data
-#
-#
-#
-#     @staticmethod
-#     def values(cls_obj, **kwargs):
-#         return cls_obj.objects.filter(**kwargs).values_list()
+class HealthCheckGenerator(object):
+    def __init__(self, manufacturer=None, user=None):
+        assert manufacturer is not None, 'Manufacturer is not be None'
+        self.manufacturer = manufacturer
+        self.start_at = time()
+        self.writer = HealthCheckBookkeepingWriter
+        self.user = user or get_or_create_tech_user()
+
+    def generate(self) -> dict:
+        data = {
+            "top_header": {
+                'spread': None,
+                'row': [],
+                'name': str(self.manufacturer)[:31],
+            },
+            'table_header': {
+                attribute["pk"]: {
+                    key: attribute[key] for key in attribute.keys()
+                } for attribute in Attribute.objects.values('pk', 'title', 'type').order_by('pk', 'type')},
+            'table_data': self.get_data(self.manufacturer)
+        }
+        
+        for idx, key in enumerate(data["table_header"].keys(), 7):
+            data["table_header"][key]["cell"] = idx
+
+        data["table_header"]["category"] = {"title": "подкласс", "cell": 5}
+        data["table_header"]["title"] = {"title": "наименование", "cell": 4}
+        data["table_header"]["article"] = {"title": "артикул", "cell": 2}
+        data["table_header"]["pk"] = {"title": "идентификатор", "cell": 1}
+        data["table_header"]["additional_article"] = {"title": "доп. артикул", "cell": 3}
+        data["table_header"]["manufacturer"] = {"title": "производитель", "cell": 6}
+        
+        yield data
+        
+    def get_data(self, manufacturer):
+        manufactures_to = Manufacturer.objects.exclude(pk=manufacturer.pk).filter(is_tried=True)
+        
+        pr_counts = Product.objects.filter(manufacturer=manufacturer).count()
+        limit = int(pr_counts/4)
+        for initial_product in Product.objects.filter(manufacturer=manufacturer)[limit*2:3*limit]:
+            for manufacturer_to in manufactures_to:
+                
+                analog = initial_product.get_analog(manufacturer_to)
+                
+                # if analog is None:
+                #     continue
+
+                queryset__pk = initial_product.raw.get("analogs", {}).get(manufacturer_to.pk, {}) if initial_product.raw is not None else {}
+                yield {
+                    'initial_product': initial_product,
+                    'analogs': {
+                        'analog': analog,
+                        'manufacturer_to': manufacturer_to,
+                        'queryset': Product.objects.filter(pk__in=queryset__pk.get("analog_seconds")) if queryset__pk.get("analog_seconds") is not None else []
+                    }
+                }
+    
+    def generate_and_write(self):
+        with self.writer(f'HealthCheck for {self.manufacturer.title} p3', self.user) as writer:
+            writer.dump(self.generate())

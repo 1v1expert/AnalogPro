@@ -2,7 +2,7 @@
 
 <div id="myCarousel" class="carousel slide" data-ride="carousel">
     <div id="lp-pom-block-10" style="height: 520px;">
-        <div class="banner-dot" style="height: 520px">
+        <div class="banner-dot" style="height: 520px;z-index: 0;">
             <ol class="carousel-indicators">
                 <li data-target="#myCarousel" data-slide-to="0"></li>
                 <li data-target="#myCarousel" data-slide-to="1" class="active"></li>
@@ -13,7 +13,7 @@
                     <div class="item">
                         <div class="container">
                             <div class="carousel-caption"
-                                 style="object-fit: cover;border-radius: 5px;background-size: cover;background-image: linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url({% static 'landing_images/item1.jpg' %})">
+                                 style="object-fit: cover;border-radius: 5px;background-size: cover;background-image: linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url({% static 'landing_images/item1-compressed.jpg' %})">
                                 {#      linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5))                  #}
                                 {#                <p class="main-image"><img src="{% static 'images/icon1.png' %}" alt="" /></p>#}
                                 <div class="letter-container">
@@ -46,7 +46,7 @@
                     <div class="item active">
                         <div class="container">
                             <div class="carousel-caption"
-                                 style="background-size: cover;border-radius: 5px;background-image: linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url({% static 'landing_images/item3.jpg' %})">
+                                 style="background-size: cover;border-radius: 5px;background-image: linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url({% static 'landing_images/item3-compressed.jpg' %})">
                                 {#                <p class="main-image"><img src="{% static 'images/icon1.png' %}" alt="" /></p>#}
                                 <div class="letter-container">
                                     <h1><a href="#">Поиск аналога по артикулу</a></h1>
@@ -54,15 +54,16 @@
                                 <h2></h2>
                                 {#                <div class="container">#}
                                 <div class="row" style="margin-top: 40px;">
-                                    <div class="col-md-11 col-md-offset-1">
+                                    <div class="col-md-12">
                                         <form action="{% url 'api:search' %}" method="post" id="form">
                                             {% csrf_token %}
+                                            <input type="hidden" name="pk" id="pk" value="">
                                             {#                                            <input type="hidden" name="advanced_search" value="False">#}
                                             <input type="hidden" name="manufacturer_to" id="manufacturer_to"
                                                    value="{{ manufacturers.first.id }}">
                                             {#                                            <input type="hidden" name="manufacturer_from" id="manufacturer_from" value="{{ manufacturers.first.id }}">#}
                                             <div class="input-append" style="    margin-top: 50px;">
-                                                <input class="search" type="text" name="article" id="article"
+                                                <input class="search" type="text" name="article" id="article" style="width: 50%"
                                                        placeholder="Введите номер артикула">
                                                 <div class="btn-group">
                                                     <button class="btn dropdown-toggle btn-border"
@@ -91,7 +92,7 @@
                     <div class="item">
                         <div class="container">
                             <div class="carousel-caption"
-                                 style="background-size: cover;border-radius: 5px;background-image:linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url({% static 'landing_images/item2.jpg' %})">
+                                 style="background-size: cover;border-radius: 5px;background-image:linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url({% static 'landing_images/item2-compressed.jpg' %})">
                                 <div class="letter-container">
                                     <h1><a href="#">Поиск аналога по спецификации</a></h1>
                                 </div>
@@ -100,12 +101,12 @@
                                       method="post" id="specification_search_form">
                                     {% csrf_token %}
                                     <div class="row" style="margin-top: 40px;">
-                                        <div class="col-md-7 col-md-offset-2 col-lg-8 ">
+                                        <div class="col-md-12">
                                             <input type="hidden" name="manufacturer_to" id="manufacturer_to"
                                                    value="{{ manufacturers.first.id }}">
                                             <div class="input-append" style="    margin-top: 50px;">
                                                 <label for="file-upload" class="custom-file-upload search"
-                                                       style="height: 56px;">
+                                                       style="height: 56px;width: 50%">
                                                     <i class="fa fa-cloud-upload fa-inverse"></i> Загрузить файл
                                                 </label>
                                                 <input id="file-upload" name="file" type="file"
@@ -130,6 +131,7 @@
                                     <div class="row">
                                         <input type="submit" class="search-area search-btn style-button"
                                                value="Искать"/>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -145,5 +147,6 @@
         {#      <div class="banner-arrow">#}
         {#        <p class="pulse"><a href="#choose"><img src="{% static 'images/arrow-bottom.png' %}" alt=""/></a></p>#}
         {#      </div>#}
+
     </div>
 </div>

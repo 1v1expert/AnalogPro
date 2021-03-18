@@ -1,26 +1,18 @@
-from django.shortcuts import render, redirect, get_object_or_404
-
-from django.contrib.auth import authenticate, login, logout, models, forms
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, Http404, JsonResponse
-from django.core.mail import get_connection, send_mail
-from django.conf import settings
-
-from catalog.models import DataFile, Manufacturer
-from catalog import choices
-from catalog.handlers import ProcessingSearchFile
-from catalog.internal.auth_actions import registration
-from catalog.internal.messages import send_email_with_connection
-
-from app.forms import \
-    MyAuthenticationForm, MyRegistrationForm, AppSearchForm, SearchFromFile, EmailConfirmationForm, FeedBackForm, SubscribeForm
-from app.decorators import a_decorator_passing_logs
-from app.models import MainLog
-from app.trans import trans_text
-
+import hashlib
 from smtplib import SMTPDataError
 
-import hashlib
+from django.contrib.auth import login, models
+from django.contrib.auth.decorators import login_required
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+
+from app.decorators import a_decorator_passing_logs
+from app.forms import FeedBackForm, MyAuthenticationForm, MyRegistrationForm, SearchFromFile, SubscribeForm
+from app.trans import trans_text
+from catalog import choices
+from catalog.handlers import ProcessingSearchFile
+from catalog.internal.messages import send_email_with_connection
+from catalog.models import DataFile, Manufacturer
 
 
 @login_required(login_url='login/')

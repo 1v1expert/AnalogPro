@@ -19,6 +19,11 @@
     <!--=============================Separator block=============================-->
     {#<div class="seprator-block" style="height: 20px;"></div>#}
 
+    <!--=============================Youtube player inte=============================-->
+    {% block youtube_player %}
+        {% include 'sections/youtube_player.html' %}
+    {% endblock youtube_player %}
+
     <!--=============================Search by article=============================-->
     {% block search_article %}
         {% include 'sections/search_article.html' %}

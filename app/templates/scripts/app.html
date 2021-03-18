@@ -88,7 +88,7 @@
                         $('#result').html('Спасибо, вы успешно подписаны.');
                     }
                     else {
-                        $('#result').html(response.error);
+                        $('#result').html('Вы уже подписаны.');
                     }
                 },
                 error: function (error) {
@@ -238,11 +238,11 @@
          Analogue search from article
          ==================*/
 
-        var form = $('#form');
+        let form = $('#form');
         form.submit(function (e) {
             e.preventDefault();
 
-            var attempt_count = +accessCookie('attempt_count');
+            let attempt_count = +accessCookie('attempt_count');
             {% if not request.user.is_authenticated %}
                 if (attempt_count > 10) {
                     swal("Ошибка!", "Пожалуйста, авторизуйтесь, чтобы продолжить пользоваться сервисом", "info");
@@ -257,9 +257,10 @@
                 {#async: false,#}
                 data: form.serialize(),
                 success: function (data) {
+                    $("#pk").val("")
                     if (data.error) {
                         {#alert(data.error);#}
-                        swal("Внимание!", data.error, {
+                        swal("Внимание!", data.description, {
                             {#content: ,#}
                             buttons: {
                                 cancel: "Ok",
@@ -307,6 +308,7 @@
                         createCookie("attempt_count", attempt_count + 1, 10);
 
                         function buildTable(data, image) {
+                            console.log(data);
                             var table = document.createElement("table");
                             table.className = "table table-hover mb-0";
                             table.id = 'table-info';
@@ -345,8 +347,8 @@
                             return table;
                         }
 
-                        swal("Артикул: " + data.result.join(' ;'), {
-                            content: buildTable(data.info, data.image),
+                        swal("Артикул: " + data.body.result.join(' ;'), {
+                            content: buildTable(data.body.info, data.image),
                             buttons: {
                                 cancel: "Закрыть",
                                 catch: {
@@ -430,9 +432,8 @@
 
                 },
                 error: function (data) {
+                    $("#pk").val("")
                     swal("Сбой поиска!", "Произошла системная ошибка", "warning");
-                    {#alert('Произошла системная ошибка');#}
-                    console.log('Error', data)
                 }
             })
         });
@@ -472,17 +473,16 @@
                         article: request.term
                     },
                     success: function (data) {
-                        console.log(data);
-                        response(data);
-
+                        if (!data.error) {
+                            response(data.body);
+                        }
                     }
                 });
 
             },
             minLength: 2,
             select: function (event, ui) {
-                console.log(event, ui);
-                {#console.log( "Selected: " + ui.item.value + " aka " + ui.item.id );#}
+                $("#pk").val(ui.item.pk)
             }
         })
             .autocomplete("instance")._renderItem = function (ul, item) {

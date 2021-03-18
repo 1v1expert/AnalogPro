@@ -30,8 +30,8 @@ class FeedBack(models.Model):
     is_subscriber = models.BooleanField(default=False, null=True, verbose_name="Подписка")
     
     class Meta:
-        verbose_name = "Обратная связь"
-        verbose_name_plural = "Обратная связь"
+        verbose_name = "Обратная связь/подписка"
+        verbose_name_plural = "Обратная связь/подписка"
         ordering = ('-action_time',)
     
 
@@ -42,6 +42,7 @@ class MainLog(models.Model):
     message = models.TextField(_('message'), blank=True)
     raw = pgfields.JSONField(null=True, blank=True, verbose_name="Голые данные")
     has_errors = models.BooleanField(default=False, null=True)
+    # method = models.
     
     class Meta:
         verbose_name = "Лог активности"

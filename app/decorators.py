@@ -1,14 +1,19 @@
-from app.models import MainLog
-
 import requests
-
 from django.conf import settings
 
-import json
+from app.models import MainLog
+from functools import wraps
 
 
 def a_decorator_passing_logs(func):
-    def wrapper_logs(request, *args, **kwargs):
+    
+    @wraps(func)
+    def wrapper_logs(*args, **kwargs):
+        if len(args) == 1:
+            request = args[0]  # if called func
+        elif len(args) > 1:
+            request = args[1]  # if called method of class
+
         message = {}
         
         try:
@@ -26,21 +31,28 @@ def a_decorator_passing_logs(func):
         if request.method == 'POST':
             message['post_data'] = request.POST
 
-        response_func = func(request, *args, **kwargs)
+        response_func = func(*args, **kwargs)
         response_content_type = response_func._headers['content-type'][1]
         response = b'<html>'
         if 'json' in response_content_type:
             response = response_func._container[0]
-            
-        MainLog.objects.create(user=user,
-                               message=message,
-                               client_address=client_address,
-                               raw={'raw_request': message,
-                                    'HTTP_USER_AGENT': request.META.get('HTTP_USER_AGENT'),
-                                    'HTTP_CONNECTION': request.META.get('HTTP_CONNECTION'),
-                                    'response_headers': response_func._headers,
-                                    'response': response.decode('utf-8')}
-                               )
+
+        MainLog.objects.create(
+            user=user,
+            message=message,
+            client_address=client_address,
+            raw={
+                'request': {
+                    'raw_request': message,
+                    'HTTP_USER_AGENT': request.META.get('HTTP_USER_AGENT'),
+                    'HTTP_CONNECTION': request.META.get('HTTP_CONNECTION')
+                },
+                'response': {
+                    'response_headers': response_func._headers,
+                    'response': response.decode('utf-8')
+                }
+            }
+        )
         
         return response_func
     

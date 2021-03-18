@@ -136,12 +136,12 @@ def get_product_info(analog, original=None):
         
         analog_info = {'name': analog_name}
         
-        if attr.__class__.__name__ == 'FixedAttributeValue':
+        if attr.attribute.is_fixed:
             analog_value = attr.value.title
             original_value = orig_attr.value.title if orig_attr else ""
             fixed_attributes.append(attr.value)  # for search group with image
         else:
-            analog_value = attr.value
+            analog_value = attr.un_value
             original_value = orig_attr.value if orig_attr else ""
 
         analog_info['value'] = analog_value

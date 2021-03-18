@@ -1,6 +1,51 @@
 /*	Main stylesheet for app
 	==========================
 */
+.footer-link ul li a {
+    width: 125px;
+}
+@media (max-width: 768px) {
+    .blue-button {
+        width: 150px;
+        -webkit-border-radius: 4px;
+        -moz-border-radius: 4px;
+        border-radius: 4px;
+        margin: 0px 20px 0px 0px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+        display: inline-block;
+    }
+}
+
+@media (max-width: 1000px) {
+    .carousel-control .glyphicon-chevron-right {
+        background: url(../images/arrow-right-w.png) no-repeat;
+    }
+    .carousel-control .glyphicon-chevron-left {
+        background: url(../images/arrow-left-w.png) no-repeat;
+    }
+}
+
+.open>.dropdown-menu {
+    border-radius: 6px;
+}
+.dropdown-menu>li>a {
+    display: block;
+    padding: 3px 35px;
+    clear: both;
+    font-weight: 500;
+    line-height: 1.42857143;
+    color: #333;
+    white-space: nowrap;
+}
+
+.btn-group, .btn-group-vertical {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+}
 
 body {
     font-family: HelveticaNeueCyr;
@@ -283,9 +328,29 @@ h4 {
         font-size: 14px;
     }
 
-    .how-card {
-        height: 350px;
+    /* start update 27.01.2021 */
+
+    /*.how-card {*/
+    /*    height: 350px;*/
+    /*}*/
+    .header-howcard-row {
+        height: 45px;
     }
+    .service-container {
+        padding: 0px 0px;
+    }
+    .how-service {
+        height: auto;
+        margin-bottom: 20px;
+    }
+    .how-card {
+        height: auto;
+    }
+    h3 {
+        margin-top: 10px;
+    }
+
+    /* end update 27.01.2021 */
 
     .how-card h3 {
         font-size: 20px;
@@ -309,7 +374,11 @@ h4 {
 @media (min-width: 640px) {
     .input-append .btn-group:last-child > .dropdown-toggle {
         margin-top: 1px;
-        padding: 22px 32px;
+        padding: 23px 32px;
+    }
+
+    .service-container {
+        padding: 0px 0px;
     }
 }
 
@@ -342,8 +411,8 @@ h4 {
     }
 
     .baaner-container {
-        width: 78%;
-        margin: 0 11%;
+        width: 86%;
+        margin: 0px 7%;
     }
 
     .letter-container h1 a {

@@ -1,23 +1,22 @@
-from catalog.models import DataFile
-from catalog import choices
-
-import xlsxwriter
-
+import csv
 from collections import OrderedDict
 from datetime import datetime
 
-import csv
-
+import xlsxwriter
 from django.conf import settings
 from django.utils.functional import LazyObject, SimpleLazyObject
 
+from catalog import choices
+from catalog.models import DataFile
+from catalog.utils import get_or_create_tech_user
+
 
 class BookkeepingWriter(object):
-    def __init__(self, name, user):
+    def __init__(self, name, user=None):
         self.filename = 'files/{}.xlsx'.format(name)
         # self.filename = name
         self._default_ws = None
-        self.user = user
+        self.user = user or get_or_create_tech_user()
         self._row = 0
         self._col = 0
     
@@ -26,10 +25,10 @@ class BookkeepingWriter(object):
         self._col = 0
         self._default_ws = self._wb.add_worksheet(name)
     
-    def dump(self, book):
+    def dump(self, books):
         # self.write_top_header(**data['top_header'])
         # for data in book:
-        for data in book:
+        for data in books:
             self.create_page(data['top_header']['name'])
             self.write_table_header(data['table_header'].values())
             # FIXME: make use of `for k in data['table_header']`
@@ -116,6 +115,64 @@ class BookkeepingWriter(object):
         # self.instance.file.save(self.filename, save_virtual_workbook(self._wb))
         datafile.file.name = self.filename
         datafile.save()
+
+        
+class HealthCheckBookkeepingWriter(BookkeepingWriter):
+    
+    def write_table_header(self, row):
+        for col, key in enumerate(row.keys()):
+            value: str = f'{row[key]["title"]}'
+            if row[key].get("type"):
+                value += f'({row[key]["type"]})'
+            self._default_ws.write(self._row, row[key]["cell"], value)
+            
+    def write_position(self, position, number_line, header):
+        number_line += 1
+        self.write_product(position["initial_product"], header, number_line)
+        
+        if position["analogs"]["analog"]:
+            number_line += 1
+            self.write_product(position["analogs"]["analog"], header, number_line, type_record='Приор. аналог')
+            
+            if position["analogs"]["queryset"]:
+                for analog in position["analogs"]["queryset"]:
+                    number_line += 1
+                    self.write_product(analog, header, number_line, type_record='Проч. аналог')
+        else:
+            number_line += 1
+            self._default_ws.write(number_line, 0, f'Аналог в {position["analogs"].get("manufacturer_to")} не найден')
+            
+        return number_line + 1
+    
+    def write_product(self, product, header, number_line, type_record='Исходный продукт'):
+        full_info = product.get_attributes()
+        for key in full_info.keys():
+            attribute = full_info[key]
+            
+            c_item = str(attribute["un_value"])
+            if attribute["attribute__is_fixed"]:
+                c_item = str(attribute["value__title"])
+            
+            self._default_ws.write(number_line, header[attribute["attribute__pk"]]["cell"], c_item)
+
+        self._default_ws.write(number_line, header["title"]["cell"], product.title)
+        self._default_ws.write(number_line, header["article"]["cell"], product.article)
+        self._default_ws.write(number_line, header["category"]["cell"], product.category.title)
+        self._default_ws.write(number_line, header["manufacturer"]["cell"], product.manufacturer.title)
+        self._default_ws.write(number_line, header["additional_article"]["cell"], product.additional_article)
+        self._default_ws.write(number_line, header["pk"]["cell"], product.pk)
+        self._default_ws.write(number_line, 0, type_record)
+        
+    def dump(self, books):
+        for data in books:
+            self.create_page(data['top_header']['name'])
+            self.write_table_header(data['table_header'])
+            line = 2
+            for position in data['table_data']:
+                line = self.write_position(position, line, data["table_header"])
+                
+    def write(self):
+        pass
 
 
 def dump_csv(name, data):

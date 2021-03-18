@@ -1,24 +1,17 @@
+from datetime import datetime
+
 from django.contrib import admin
 from django.contrib import messages
-from django.contrib.admin.views.main import ChangeList
-
-from django.utils.safestring import mark_safe
 from django.contrib.admin.models import LogEntry
+from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import User
-
-from catalog.models import Category, Product, Manufacturer, Attribute, FixedAttributeValue, FixedValue, \
-    UnFixedAttributeValue, Specification, DataFile, GroupSubclass
-from catalog.file_utils import XLSDocumentReader, ProcessingUploadData, KOKSDocumentReader, IEKDocumentReader, GeneralDocumentReader, BettermannDocumentReader, PKT, GeneralDocumentReaderMountingElements
-from catalog.reporters import writers, generators
-
-from catalog.forms import ProductChangeListForm
+from django.utils.safestring import mark_safe
 
 from app.models import MainLog
-
-from feincms.admin import tree_editor
-
-from datetime import datetime
-import time
+from catalog.file_utils import ProcessingUploadData, XLSDocumentReader
+from catalog.models import Attribute, Category, DataFile, FixedValue, GroupSubclass, Manufacturer, Product, \
+    Specification, AlternativeCategory
+from catalog.reporters import generators, writers
 
 
 def mark_as_published(modeladmin, request, queryset):
@@ -37,7 +30,7 @@ mark_as_unpublished.short_description = u"Снять с публикации"
 
 class BaseAdmin(admin.ModelAdmin):
 
-    list_display = ['title', 'id','is_public', 'deleted', 'created_at', 'created_by', 'updated_at','updated_by']
+    list_display = ['title', 'id', 'is_public', 'deleted', 'created_at', 'created_by', 'updated_at', 'updated_by']
     save_on_top = True
     actions = [mark_as_published, mark_as_unpublished]
     list_filter = ['is_public', 'deleted', 'created_at', 'updated_at']
@@ -66,7 +59,7 @@ class AttributeshipInline(admin.TabularInline):
     model = Category.attributes.through
 
 
-class CategoryAdmin(tree_editor.TreeEditor, BaseAdmin):
+class CategoryAdmin(BaseAdmin):
     list_display = ('title', 'get_attributes')
     
     #inlines = [AttributeshipInline]
@@ -78,40 +71,18 @@ class CategoryAdmin(tree_editor.TreeEditor, BaseAdmin):
         obj.updated_by = request.user
         obj.save()
         if obj.parent and not obj.attributes.all().count():
-            print(obj, list(obj.parent.attributes.all()))
             obj.attributes.add(*list(obj.parent.attributes.all()))
-            print(obj.attributes.all())
             # obj.attributes.save()
             # obj.save()  ## what is it??
         
-    # @staticmethod
     def get_attributes(self, obj):
         """Атрибуты"""
         return "; ".join(['{}: {}'.format(p.type, p.title) for p in obj.attributes.all()])
     get_attributes.short_description = 'Атрибуты'
-    
-
-# class CategoryAdmin(BaseAdmin):
-#     autocomplete_fields = ['parent']
-#     inlines=[SubCatValInline]
 
 
-class AttrAdmin(BaseAdmin):
-    list_display = ['title', 'unit', 'id', 'type', 'priority', 'is_public', 'deleted']
-    #'category'
-    #autocomplete_fields = ['category']
-
-
-class AttrValAdmin(BaseAdmin):
-    list_display = ['title', 'attribute', 'id', 'is_public', 'deleted']
-    
-    #autocomplete_fields = ['attribute']
-    exclude = ('products',)
-    
-    # def formfield_for_foreignkey(self, db_field, request, **kwargs):
-    #     if db_field.name == "attribute":
-    #         print(json.dumps(kwargs, indent=2))
-    #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
+class AttributeAdmin(BaseAdmin):
+    list_display = ['title', 'unit', 'weight', 'id', 'type', 'priority', 'is_public', 'deleted']
 
 
 class ProductChangeList(ChangeList):
@@ -129,43 +100,99 @@ class ProductChangeList(ChangeList):
 
 
 class ProductAdmin(BaseAdmin):
-    list_display = ['title', 'article', 'manufacturer', 'get_fix_attrs_vals', 'get_unfix_attrs_vals', 'category', 'is_public', 'deleted']
-    # inlines = [PropertiesInline]
-    #filter_horizontal = ['attrs_vals']
+    list_display = ['title', 'article', 'manufacturer', 'category', 'get_attributes', 'series', 'priority', 'is_public', 'deleted', ]
+    list_select_related = True
     autocomplete_fields = ['category', 'manufacturer',]
+
+    def get_attributes(self, obj):
+        return "; ".join(
+            [
+                '{}: {}'.format(
+                    p['attribute__title'],
+                    p['value__title'] if p['attribute__is_fixed'] else p['un_value']) for p in obj.get_full_info()
+            ]
+        )
+
+    get_attributes.short_description = 'Атрибуты'
     
-    # @staticmethod
-    def get_fix_attrs_vals(self, obj):
-        return "; ".join(['{}: {}'.format(p.attribute.title, p.value.title) for p in obj.fixed_attrs_vals.all()])
-
-    get_fix_attrs_vals.short_description = 'Фиксированные атрибуты'
-    
-    def get_unfix_attrs_vals(self, obj):
-        return "; ".join(['{}: {}'.format(p.attribute.title, p.value) for p in obj.unfixed_attrs_vals.all()])
-
-    get_unfix_attrs_vals.short_description = 'Нефиксированные атрибуты'
-    # def get_changelist(self, request, **kwargs):
-    #     return ProductChangeList
-    #
-    # def get_changelist_form(self, request, **kwargs):
-    #     return ProductChangeListForm
-    # exclude = ('attrs_vals', )
-
-# class ListingAdmin(BaseAdmin):
-#     actions = None
-#     search_fields = ['=user__username', ]
-#     fieldsets = [
-#         (None, {'fields':()}),
-#         ]
-
-#     def __init__(self, *args, **kwargs):
-#         super(LogEntryAdmin, self).__init__(*args, **kwargs)
-#         self.list_display_links = (None, )
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related(
+            'attributevalue_set',
+            'attributevalue_set__attribute',
+            'attributevalue_set__value'
+        ).select_related(
+            'manufacturer',
+            'category'
+        )
 
 
 class ManufacturerAdmin(BaseAdmin):
-    list_display = ['title', 'id', 'created_at', 'created_by']
-    actions = ['export_data_to_xls', 'export_full_dump', 'export_duplicate_products']
+    list_display = ['title', 'id', 'is_tried', 'get_product_count', 'get_kns_product_count',
+                    'get_fasteners_product_count', 'get_working_product_count', 'created_at', 'created_by']
+    actions = ['export_data_to_xls', 'export_full_dump', 'export_duplicate_products', 'delete_fasteners_products',
+               'delete_kns_products', 'download_check_result', 'clear_analogs']
+    
+    def get_product_count(self, obj):
+        return obj.products.count()
+
+    get_product_count.short_description = 'Кол-во поз-й'
+    
+    def get_kns_product_count(self, obj):
+        return obj.products.filter(
+            category__parent__title__icontains="КНС",
+        ).count()
+
+    get_kns_product_count.short_description = 'Кол-во КНС'
+
+    def get_fasteners_product_count(self, obj):
+        return obj.products.filter(
+            category__parent__title__icontains="крепеж",
+        ).count()
+
+    get_fasteners_product_count.short_description = 'Кол-во КРЕПЕЖ'
+    
+    def get_working_product_count(self, obj):
+        return obj.products.exclude(raw=None).count()
+
+    get_working_product_count.short_description = 'Кол-во обраб. поз-й'
+    
+    def clear_analogs(self, request, queryset):
+        for manufacturer in queryset:
+            Product.objects.filter(manufacturer=manufacturer).update(raw=None)
+            for product in Product.objects.filter(manufacturer=manufacturer):
+                product.analogs_to.clear()
+
+        messages.add_message(request, messages.SUCCESS,
+                             'Результаты подобора для выбранных производителей успешно очищены')
+    clear_analogs.short_description = 'Очистить рез-ты подбора'
+    
+    def delete_fasteners_products(self, request, queryset):
+        for manufacturer in queryset:
+            products = Product.objects.filter(
+                manufacturer=manufacturer,
+                category__parent__title__icontains="крепеж",
+            )
+            c_products = products.count()
+            products.delete()
+
+            messages.add_message(request, messages.SUCCESS,
+                                 f'Удалены {c_products} позиций у {manufacturer.title} в категории "Крепеж"')
+
+    delete_fasteners_products.short_description = 'Удалить позиции "Крепеж"а'
+    
+    def delete_kns_products(self, request, queryset):
+        for manufacturer in queryset:
+            products = Product.objects.filter(
+                manufacturer=manufacturer,
+                category__parent__title__icontains="КНС",
+            )
+            c_products = products.count()
+            products.delete()
+    
+            messages.add_message(request, messages.SUCCESS,
+                                 f'Удалены {c_products} позиций у {manufacturer.title} в категории "КНС"')
+
+    delete_kns_products.short_description = 'Удалить позиции "КНС"а'
     
     def export_full_dump(self, request, queryset):
         meta_data = generators.AdditionalGeneratorTemplate((User, Manufacturer, Category, Attribute, FixedValue))
@@ -187,11 +214,19 @@ class ManufacturerAdmin(BaseAdmin):
         )
         with writers.BookkeepingWriter('Dump duplicate products {}'.format(datetime.now().date()), request.user) as writer:
             writer.dump(meta_data.generate())
+
     export_duplicate_products.short_description = 'Выгрузить дубликаты'
+    
+    def download_check_result(self, request, queryset):
+        for manufacturer in queryset:
+            generator = generators.HealthCheckGenerator(manufacturer, request.user)
+            generator.generate_and_write()
+
+    download_check_result.short_description = 'Download check result'
 
 
 class FileUploadAdmin(admin.ModelAdmin):
-    actions = ['process_general_file_mounting_elements', 'process_file', 'process_koks_file', 'process_iek_file', 'process_bettermann_file', 'process_general_file', 'process_pkt_file']
+    actions = ['process_file']
     list_display = ['file', 'type', 'file_link', 'created_at', 'created_by']
     
     def file_link(self, obj):
@@ -203,90 +238,11 @@ class FileUploadAdmin(admin.ModelAdmin):
     file_link.allow_tags = True
     file_link.short_description = 'Ссылка на скачивание'
     
-    def process_iek_file(self, request, queryset):
-        if not len(queryset) == 1:
-            messages.add_message(request, messages.ERROR, 'Пожалуйста, выберите один файл')
-            return
-        try:
-            IEKDocumentReader(path=queryset[0].file.name, only_parse=False).parse_file()
-        except FileNotFoundError:
-            messages.add_message(request, messages.ERROR, 'Файл {} не найден'.format(queryset[0].file.name))
-    process_iek_file.short_description = 'Импортировать шаблон(IEK)'
-    
-    def process_bettermann_file(self, request, queryset):
-        if not len(queryset) == 1:
-            messages.add_message(request, messages.ERROR, 'Пожалуйста, выберите один файл')
-            return
-        try:
-            BettermannDocumentReader(path=queryset[0].file.name, only_parse=False).parse_file()
-        except FileNotFoundError:
-            messages.add_message(request, messages.ERROR, 'Файл {} не найден'.format(queryset[0].file.name))
-    process_bettermann_file.short_description = 'Импортировать шаблон(bettermann)'
-    
-    def process_koks_file(self, request, queryset):
-        if not len(queryset) == 1:
-            messages.add_message(request, messages.ERROR, 'Пожалуйста, выберите один файл')
-            return
-        try:
-            KOKSDocumentReader(path=queryset[0].file.name, only_parse=False).parse_file()
-        except FileNotFoundError:
-            messages.add_message(request, messages.ERROR, 'Файл {} не найден'.format(queryset[0].file.name))
-    process_koks_file.short_description = 'Импортировать шаблон(KOKs)'
-    
-    def process_general_file(self, request, queryset):
-        if not len(queryset) == 1:
-            messages.add_message(request, messages.ERROR, 'Пожалуйста, выберите один файл')
-            return
-        try:
-            document = GeneralDocumentReader(path=queryset[0].file.name,
-                                             only_parse=False,
-                                             loadnetworkmodel=True).parse_file()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Файл {} загружен, {} позиций, дублей - {}'.format(
-                                     queryset[0].file.name, document.c_lines, len(document.doubles_article)
-                                 ))
-        except FileNotFoundError:
-            messages.add_message(request, messages.ERROR, 'Файл {} не найден'.format(queryset[0].file.name))
-        except Exception as e:
-            messages.add_message(request, messages.ERROR, 'Ошибка, детали: {}'.format(e))
-    process_general_file.short_description = 'Импортировать шаблон(Обработанный)'
-    
-    def process_general_file_mounting_elements(self, request, queryset):
-        if not len(queryset) == 1:
-            messages.add_message(request, messages.ERROR, 'Пожалуйста, выберите один файл')
-            return
-        try:
-            document = GeneralDocumentReaderMountingElements(path=queryset[0].file.name,
-                                                             only_parse=False,
-                                                             loadnetworkmodel=False).parse_file()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Файл {} загружен, {} позиций, дублей - {}'.format(
-                                     queryset[0].file.name, document.c_lines, len(document.doubles_article)
-                                 ))
-        except FileNotFoundError:
-            messages.add_message(request, messages.ERROR, 'Файл {} не найден'.format(queryset[0].file.name))
-        except Exception as e:
-            messages.add_message(request, messages.ERROR, 'Ошибка! детали: {}'.format(e))
-    process_general_file_mounting_elements.short_description = 'Импортировать шаблон(монтажные элементы)'
-    
-    def process_pkt_file(self, request, queryset):
-        if not len(queryset) == 1:
-            messages.add_message(request, messages.ERROR, 'Пожалуйста, выберите один файл')
-            return
-        try:
-            document = PKT(path=queryset[0].file.name, only_parse=False).parse_file()
-            messages.add_message(request, messages.SUCCESS, 'Файл {} загружен, {} позиций'.format(queryset[0].file.name, document.c_lines))
-        except FileNotFoundError:
-            messages.add_message(request, messages.ERROR, 'Файл {} не найден'.format(queryset[0].file.name))
-    process_pkt_file.short_description = 'Импортировать шаблон(PKT)'
-    
     def process_file(self, request, queryset):
         for qq in queryset:
             created, error = ProcessingUploadData(
-                XLSDocumentReader(path=qq.file.name).parse_file(), start_time=time.time()
-            ).get_structured_data(request)
+                XLSDocumentReader(path=qq.file.name).parse_file(), request=request
+            ).get_structured_data(only_check=False)
             
             if created:
                 messages.add_message(request, messages.SUCCESS, 'Данные успешно загружены из {} файла в БД'.format(qq.file.name))
@@ -319,52 +275,29 @@ class LogEntryAdmin(admin.ModelAdmin):
         actions = super(LogEntryAdmin, self).get_actions(request)
         # del actions['delete_selected']
         return actions
-
-# TODO реализовать фильтры поиска по колонкам, рецепт тут: https://medium.com/@hakibenita/how-to-add-a-text-filter-to-django-admin-5d1db93772d8
-# TODO экспорт в формат xls https://xlsxwriter.readthedocs.io/index.html
-
-
-class FixAttrValAdmin(BaseAdmin):
-    list_display = ['value_title', 'attribute', 'id']
-    
-    @staticmethod
-    def value_title(obj):
-        return obj.value.title
-
-    exclude = ('products',)
-
-    
-class UnFixAttrValAdmin(BaseAdmin):
-    list_display = ['value', 'attribute', 'id']
-
-    # autocomplete_fields = ['attribute']
-    exclude = ('products',)
     
 
 class FixValAdmin(BaseAdmin):
     list_display = ['title', 'attribute', 'id', 'deleted']
 
-# admin.site.register(Category, CategoryAdmin)
-
 
 class GroupSubclassAdmin(BaseAdmin):
     list_display = ['category', 'fixed_attribute', 'image']
+    
+
+class AlternativeCategoryAdmin(BaseAdmin):
+    list_display = ['original', 'alternative']
 
 
 admin.site.register(MainLog, MainLogAdmin)
 admin.site.register(Category, CategoryAdmin)
-admin.site.register(FixedAttributeValue, FixAttrValAdmin)
-admin.site.register(UnFixedAttributeValue, UnFixAttrValAdmin)
 admin.site.register(FixedValue, FixValAdmin)
-# admin.site.register(FixedAttributeValue, AttrValAdmin)
-# admin.site.register(UnFixedAttributeValue, AttrValAdmin)
 admin.site.register(Product, ProductAdmin)
-# admin.site.register(Manufacturer, BaseAdmin)
 admin.site.register(Manufacturer, ManufacturerAdmin)
-admin.site.register(Attribute, AttrAdmin)
+admin.site.register(Attribute, AttributeAdmin)
 admin.site.register(Specification, BaseAdmin)
 admin.site.register(DataFile, FileUploadAdmin)
 admin.site.register(LogEntry, LogEntryAdmin)
 admin.site.register(GroupSubclass, GroupSubclassAdmin)
+admin.site.register(AlternativeCategory, AlternativeCategoryAdmin)
 
-# Register your models here.

@@ -6,19 +6,7 @@ def _dict(choices):
     return {k: v for k, v in choices}
 
 
-STRUCTURE_PRODUCT = (
-    (0, 'name'),
-    (1, 'class'),
-    (2, 'subclass'),
-    (3, 'series'),
-    (4, 'article'),
-    (5, 'additional_article'),
-    (6, 'manufacturer'),
-    (7, 'attributes')
-)
 
-STRUCTURE_PRODUCT_REV_DICT = _rev_dict(STRUCTURE_PRODUCT)
-STRUCTURE_PRODUCT_DICT = _dict(STRUCTURE_PRODUCT)
 
 HARD          = 'hrd'
 SOFT          = 'sft'
