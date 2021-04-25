@@ -150,7 +150,10 @@ class AttributeValue(Base):
             
         super(AttributeValue, self).save(force_insert=force_insert, force_update=force_update, using=using,
                                          update_fields=update_fields)
-    
+
+    def get_value(self):
+        return self.value.title if self.is_fixed else self.un_value
+
     @property
     def is_fixed(self):
         return self.attribute.is_fixed
