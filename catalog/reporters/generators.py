@@ -81,7 +81,7 @@ class DefaultGeneratorTemplate(object):
             is_found = False
             for value in values:
                 if attribute in value.attribute.title:
-                    list_attributes.append((i, value.value.title))
+                    list_attributes.append((i, value.un_value if value.is_fixed else value.value.title))
                     is_found = True
                     break
 
