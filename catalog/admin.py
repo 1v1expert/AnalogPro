@@ -195,16 +195,16 @@ class ManufacturerAdmin(BaseAdmin):
     delete_kns_products.short_description = 'Удалить позиции "КНС"а'
     
     def export_full_dump(self, request, queryset):
-        meta_data = generators.AdditionalGeneratorTemplate((User, Manufacturer, Category, Attribute, FixedValue))
+        generator = generators.AdditionalGeneratorTemplate((User, Manufacturer, Category, Attribute, FixedValue))
         with writers.BookkeepingWriter('Dump another data {}'.format(datetime.now().date()), request.user) as writer:
-            writer.dump(meta_data.generate())
+            writer.dump(generator.generate())
 
     export_full_dump.short_description = 'Выгрузить базу'
     
     def export_data_to_xls(self, request, queryset):
-        data = generators.DefaultGeneratorTemplate(queryset)
+        generator = generators.DefaultGeneratorTemplate(queryset)
         with writers.BookkeepingWriter('Dump data {}'.format(datetime.now().date()), request.user) as writer:
-            writer.dump(data.generate())
+            writer.dump(generator.generate())
     
     export_data_to_xls.short_description = 'Выгрузить продукты производителя(-ей)'
     

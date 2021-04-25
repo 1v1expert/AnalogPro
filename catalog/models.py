@@ -171,7 +171,7 @@ class ProductManager(models.Manager):
 
 class Product(Base):
     """
-    Модель товара
+    Model of product
     """
     title = models.CharField(max_length=255, verbose_name='Наименование')
     formalized_title = models.CharField(max_length=255, null=True, verbose_name='Формализованное наименование')
