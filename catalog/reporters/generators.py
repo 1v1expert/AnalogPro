@@ -38,7 +38,10 @@ class DefaultGeneratorTemplate(object):
                     ('manufacturer', 'Производитель'),
                     ('additional_article', 'Доп. артикул'),
                     ('series', 'Серия'),
-                    ('category', 'Категория'),
+                    ('category', 'Класс'),
+                    ('irrelevant', 'Неактуал'),
+                    ('priority', 'Приоритетность'),
+
                 ] + list(Attribute.objects.values_list('id', 'title'))
             ),
             "table_data": self.do_products(manufacturer=manufacturer, products=products)
@@ -70,7 +73,9 @@ class DefaultGeneratorTemplate(object):
                     ('manufacturer', product.manufacturer.title),
                     ('additional_article', product.additional_article),
                     ('series', product.series),
-                    ('category', product.category.title),
+                    ('category', str(product.category)),
+                    ('irrelevant', product.irrelevant),
+                    ('priority', product.priority),
                 ] + self._get_attributes(product))
 
     def _get_attributes(self, product) -> list:

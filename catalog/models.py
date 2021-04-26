@@ -195,7 +195,7 @@ class Product(Base):
     analogs_to = models.ManyToManyField('self', related_name='analogs_from')
 
     raw = pgfields.JSONField(null=True, blank=True, verbose_name="Голые данные")
-    
+
     is_base = models.BooleanField(verbose_name='Базовый', default=False)
 
     is_enabled = models.BooleanField(verbose_name='Поисковый', default=False)
