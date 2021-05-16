@@ -1,9 +1,12 @@
 # import the logging library
 import logging
 import time
+from typing import Dict
 
 import openpyxl
 from django.contrib.auth import models as auth_md
+from openpyxl import Workbook
+from openpyxl.reader.excel import ExcelReader
 from openpyxl.utils.exceptions import InvalidFileException
 from functools import lru_cache
 from app.models import MainLog
@@ -16,15 +19,17 @@ logger = logging.getLogger('analog')
 
 class XLSDocumentReader(object):
     
-    def __init__(self, path=None, workbook=None):
+    def __init__(self, path=None, workbook: Workbook = None):
         assert path or workbook, "You should provide either path to file or XLS-object"
 
         if workbook:
             self.workbook = workbook
         else:
-            self.workbook = openpyxl.load_workbook(path,
-                                                   read_only=True,
-                                                   data_only=True)
+            self.workbook: Workbook = openpyxl.load_workbook(
+                path,
+                read_only=True,
+                data_only=True
+            )
         self.xlsx = path
         self.ws = self.workbook.active
         self.sheet = self.workbook.active
@@ -82,6 +87,83 @@ def get_attribute(category, name):
 @lru_cache()
 def get_fixed_value(value, attribute):
     return FixedValue.objects.get(title__iexact=value, attribute=attribute)
+
+
+class UpdateUploadData:
+    def __init__(self, data: List[dict], request=None):
+        if request is None:
+            self.user = auth_md.User.objects.get(is_staff=True, username='admin')
+        else:
+            self.user = request.user
+        self.data = data
+        self.header: Dict[str, str] = data[0]
+        self.map_header = self.get_structured_header()
+        self.errors = []
+
+    def get_structured_header(self) -> dict:
+        attributes = Attribute.objects.values_list('title', flat=True)
+        map_header = {}
+        for key, value in self.header.items():
+            if value.lower() in ('артикул', ):
+                map_header.update({"article": key})
+            if value.lower() in ('артикул доп.', ):
+                map_header.update({"additional_article": key})
+            if value.lower() in attributes:
+                map_header.update({value: key})
+        return map_header
+
+    def process(self):
+        for product_data in self.data[1:]:
+            article = product_data[self.map_header["article"]]
+            additional_article = product_data.get(self.map_header["additional_article"])
+            products = Product.objects.filter(article=article, additional_article__iexact=additional_article)
+            product: Product = products.first()
+            if products.count() > 1:
+                duplicates = True
+                for pd in products[1:]:
+                    pd: Product
+                    if pd.category != product.category and pd.manufacturer != product.manufacturer:
+                        duplicates = False
+                if duplicates is not True:
+                    self.errors.append(f"Несколько разных позиций имеют одинак. артикул: {article}")
+                    continue
+            if not product:
+                self.errors.append(f"Артикул: {article} не найден")
+                continue
+            for attribute_name in self.map_header.keys():
+                if attribute_name in ('article', 'additional_article'):
+                    continue
+                try:
+                    attribute = Attribute.objects.get(title__iexact=attribute_name)
+                except Attribute.DoesNotExist:
+                    self.errors.append(f'Атрибут {attribute_name} не найден')
+                    continue
+                attribute_value: AttributeValue = product.attributevalue_set.filter(attribute=attribute).first()
+                if attribute_value:
+                    if attribute_value.is_fixed:
+                        if attribute_value.value.title.lower() == product_data[self.map_header[attribute_name]].lower():
+                            continue
+                        else:
+                            attribute_value.value = FixedValue.objects.get(title__iexact=product_data[self.map_header[attribute_name]], attribute=attribute)
+                            attribute_value.save()
+                    else:
+                        if attribute_value.un_value == float(product_data[self.map_header[attribute_name]]):
+                            continue
+                        else:
+                            attribute_value.un_value = float(product_data[self.map_header[attribute_name]])
+                            attribute_value.save()
+                else:
+                    av = AttributeValue(attribute=attribute)
+                    if attribute.is_fixed:
+                        fv = FixedValue.objects.get(title__iexact=product_data[self.map_header[attribute_name]], attribute=attribute)
+                        av.value = fv
+                    else:
+                        av.un_value = float(product_data[self.map_header[attribute_name]])
+                    av.product = product
+                    av.created_by = self.user
+                    av.updated_by = self.user
+                    av.save()
+        return self.errors
 
 
 class ProcessingUploadData(object):

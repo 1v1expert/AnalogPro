@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.utils.safestring import mark_safe
 
 from app.models import MainLog
-from catalog.file_utils import ProcessingUploadData, XLSDocumentReader
+from catalog.file_utils import ProcessingUploadData, XLSDocumentReader, UpdateUploadData
 from catalog.models import Attribute, Category, DataFile, FixedValue, GroupSubclass, Manufacturer, Product, \
     Specification, AlternativeCategory
 from catalog.reporters import generators, writers
@@ -226,7 +226,7 @@ class ManufacturerAdmin(BaseAdmin):
 
 
 class FileUploadAdmin(admin.ModelAdmin):
-    actions = ['process_file']
+    actions = ['process_file', 'update_positions']
     list_display = ['file', 'type', 'file_link', 'created_at', 'created_by']
     
     def file_link(self, obj):
@@ -243,12 +243,29 @@ class FileUploadAdmin(admin.ModelAdmin):
             created, error = ProcessingUploadData(
                 XLSDocumentReader(path=qq.file.name).parse_file(), request=request
             ).get_structured_data(only_check=False)
-            
+
             if created:
                 messages.add_message(request, messages.SUCCESS, 'Данные успешно загружены из {} файла в БД'.format(qq.file.name))
             else:
                 messages.add_message(request, messages.ERROR, error)
     process_file.short_description = u'Импортировать данные(общий шаблон)'
+
+    def update_positions(self, request, queryset):
+        for qq in queryset:
+            errors = UpdateUploadData(
+                XLSDocumentReader(path=qq.file.name).parse_file(),
+                request=request
+            ).process()
+
+            messages.add_message(
+                request, messages.SUCCESS,
+                'Данные из файла {} обновлены, ошибки: {}'.format(
+                    qq.file.name,
+                    "\n".join(errors)
+                )
+            )
+
+    update_positions.short_description = u'Обновить данные из файла'
     
     def save_model(self, request, obj, form, change):
         if not change:
